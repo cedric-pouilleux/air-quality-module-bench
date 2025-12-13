@@ -1,55 +1,105 @@
-# Cablage et Pinout ESP32 (Air Quality Monitor)
+# Câblage ESP32 - Module Qualité de l'Air
 
-Documentation des connexions matérielles pour le module ESP32.
+## 📌 Tableau des Connexions
 
-## Résumé du Pinout
-
-| PIN (ESP32) | Fonction | Connecté à | Notes |
-| :--- | :--- | :--- | :--- |
-| **2** | UART1 RX | MH-Z19/14A (TX) | CO2 (Serial1, mais re-mappé sur 25/26 dans `SystemInitializer`?? Vérifier code) |
-| **25** | UART2 RX | MH-Z14A (TX) | CO2 (Voir `SystemInitializer.cpp`) |
-| **26** | UART2 TX | MH-Z14A (RX) | CO2 (Voir `SystemInitializer.cpp`) |
-| **21** | I2C SDA | BMP280 (SDA) | Bus Principal (Wire) |
-| **22** | I2C SCL | BMP280 (SCL) | Bus Principal (Wire) |
-| **32** | I2C SDA | SGP40 & **SGP30** | Bus Secondaire (Wire1) |
-| **33** | I2C SCL | SGP40 & **SGP30** | Bus Secondaire (Wire1) |
-| **4** | DATA | DHT22 | Temp/Humidité |
-| **13** | UART RX | SPS30 (TX) | Particules Fines |
-| **27** | UART TX | SPS30 (RX) | Particules Fines |
-| **VIN/5V** | Power | Tous capteurs (sauf SGP30/40 en 3.3V?) | Vérifier voltage requis par module |
-| **GND** | Ground | Tous capteurs | Masse commune |
-
-## Instructions de Connexion SGP30 (Nouveau)
-
-Le SGP30 doit être connecté sur le **Second Bus I2C**, en parallèle avec le SGP40 existant.
-
-**Cablage :**
-1.  **VCC** -> 3.3V (ou 5V si votre module le gère)
-2.  **GND** -> GND
-3.  **SDA** -> Pin **32** (Connecter AVEC le fil SDA du SGP40)
-4.  **SCL** -> Pin **33** (Connecter AVEC le fil SCL du SGP40)
-
-> [!TIP]
-> **Adresses I2C :**
-> - SGP30 : `0x58`
-> - SGP40 : `0x59`
+| PIN ESP32 | Fonction | Capteur | Notes |
+|-----------|----------|---------|-------|
+| **GPIO 4** | DATA | DHT22 | 1-Wire, pull-up requis |
+| **GPIO 21** | I2C0 SDA | BMP280 | Bus principal |
+| **GPIO 22** | I2C0 SCL | BMP280 | Bus principal |
+| **GPIO 32** | I2C1 SDA | SGP40, SGP30, SHT31 | Bus secondaire |
+| **GPIO 33** | I2C1 SCL | SGP40, SGP30, SHT31 | Bus secondaire |
+| **GPIO 25** | UART RX | MH-Z14A TX | CO2 |
+| **GPIO 26** | UART TX | MH-Z14A RX | CO2 |
+| **GPIO 13** | UART RX | SPS30 TX | Particules |
+| **GPIO 27** | UART TX | SPS30 RX | Particules |
+| **VIN (5V)** | Power | MH-Z14A | Requiert 5V |
+| **3V3** | Power | Autres capteurs | 3.3V régulé |
+| **GND** | Ground | Tous | Masse commune |
 
 ---
 
-## ⚠️ Avertissement Consommation (Power Budget)
+## 🔌 Adresses I2C
 
-Vous avez beaucoup de capteurs, dont certains consomment beaucoup (pics de courant).
-Un port USB standard (PC) délivre **500mA** max.
+### Bus 0 (GPIO 21/22)
+| Capteur | Adresse |
+|---------|---------|
+| BMP280 | `0x76` |
 
-**Estimation de consommation (Pic) :**
-- **ESP32 (WiFi TX)** : ~260 mA
-- **MH-Z14A (Chauffage)** : ~150 mA
-- **SPS30 (Ventilateur/Start)** : ~80-100 mA
-- **SGP30 (Chauffage)** : ~48 mA
-- **SGP40 + BMP + DHT** : ~10 mA
-- **TOTAL PIC** : **~650 mA** 🚨
+### Bus 1 (GPIO 32/33)
+| Capteur | Adresse |
+|---------|---------|
+| SGP40 | `0x59` |
+| SGP30 | `0x58` |
+| SHT31 | `0x44` |
 
-**Risque :** "Brownout" (chute de tension), redémarrages intempestifs de l'ESP32, ou capteurs qui échouent (Timeout/Error).
+---
 
-**Recommandation :**
-Utilisez une alimentation externe USB solide (**2A minimum**, type chargeur de téléphone) connectée à l'ESP32, plutôt que le port USB de l'ordinateur si vous constatez des instabilités.
+## ⚡ Alimentation
+
+### Voltage par Capteur
+
+| Capteur | Tension | Source |
+|---------|---------|--------|
+| MH-Z14A (CO2) | **5V** | VIN direct |
+| SPS30 (PM) | **5V** | VIN direct |
+| DHT22 | 3.3V - 5V | 3V3 ou VIN |
+| BMP280 | 3.3V | 3V3 |
+| SGP40 | 3.3V | 3V3 |
+| SGP30 | 3.3V | 3V3 |
+| SHT31 | 3.3V | 3V3 |
+
+### Budget de Puissance
+
+| Composant | Consommation (pic) |
+|-----------|-------------------|
+| ESP32 (WiFi TX) | ~260 mA |
+| MH-Z14A (chauffage) | ~150 mA |
+| SPS30 (ventilateur) | ~80-100 mA |
+| SGP30 (chauffage) | ~48 mA |
+| Autres | ~10 mA |
+| **TOTAL** | **~650 mA** 🚨 |
+
+> ⚠️ **Attention** : Un port USB standard (500mA) est insuffisant !
+> Utilisez une alimentation 2A minimum.
+
+---
+
+## 🔧 Schéma de Câblage
+
+```
+ESP32                    Capteurs
+┌──────────────┐
+│              │
+│     GPIO 4 ──┼──────── DHT22 (DATA)
+│              │
+│    GPIO 21 ──┼──┬───── BMP280 (SDA)
+│    GPIO 22 ──┼──┴───── BMP280 (SCL)
+│              │
+│    GPIO 32 ──┼──┬───── SGP40/SGP30/SHT31 (SDA)
+│    GPIO 33 ──┼──┴───── SGP40/SGP30/SHT31 (SCL)
+│              │
+│    GPIO 25 ──┼──────── MH-Z14A (TX)
+│    GPIO 26 ──┼──────── MH-Z14A (RX)
+│              │
+│    GPIO 13 ──┼──────── SPS30 (TX)
+│    GPIO 27 ──┼──────── SPS30 (RX)
+│              │
+│       VIN ───┼──────── MH-Z14A, SPS30 (5V)
+│       3V3 ───┼──────── Autres capteurs (3.3V)
+│       GND ───┼──────── Tous (GND)
+│              │
+└──────────────┘
+```
+
+---
+
+## 📝 Notes
+
+1. **Double Bus I2C** : Isole le BMP280 (instable) des capteurs SGP. Un reset du Bus 0 n'affecte pas le Bus 1.
+
+2. **Pull-up DHT22** : Résistance 4.7kΩ - 10kΩ entre DATA et 3V3 recommandée.
+
+3. **MH-Z14A** : Orientation des fils importante, vérifier TX/RX.
+
+4. **SPS30** : Nécessite un connecteur JST-ZHR-5 ou câblage direct.
