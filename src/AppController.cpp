@@ -13,14 +13,6 @@ static void staticOnMqttConnected() {
     if (instance) instance->onMqttConnected();
 }
 
-static void staticOnMqttReconnect(unsigned int attempt) {
-    // Optional logging
-}
-
-static void staticOnMqttDisconnected(int reason) {
-    // Optional logging
-}
-
 AppController::AppController() 
     : co2Serial(2), 
       sps30Serial(1),
@@ -41,8 +33,6 @@ void AppController::initHardware() {
 
 void AppController::initNetwork() {
     network.onMqttConnectedCallback = staticOnMqttConnected;
-    network.onMqttReconnectAttemptCallback = staticOnMqttReconnect;
-    network.onMqttDisconnectedCallback = staticOnMqttDisconnected;
     network.setCallback(staticMqttCallback);
 }
 
@@ -174,7 +164,6 @@ void AppController::handleMHZ14A() {
         lastCo2ReadTime = now;
         int ppm = sensorReader.readCO2();
         if (ppm >= 0) {
-            if (firstValidPpm < 0) firstValidPpm = ppm;
             lastCO2Value = ppm;
             statusCo2 = "ok";
             network.publishCO2(ppm);

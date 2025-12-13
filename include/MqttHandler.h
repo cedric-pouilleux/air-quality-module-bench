@@ -35,6 +35,7 @@ private:
 
     void handleConfigMessage(char* msg);
     void handleResetMessage(char* msg);
+    bool updateInterval(JsonObject& sensors, const char* key, unsigned long* configValue);
 };
 
 #endif

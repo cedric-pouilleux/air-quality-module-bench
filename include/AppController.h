@@ -74,7 +74,6 @@ private:
     unsigned long lastShtReadTime = 0;
     unsigned long lastPressureReadTime = 0;
     unsigned long lastSystemInfoTime = 0;
-    unsigned long stabilizationStartTime = 0;
     
     bool mqttJustConnected = false;
     unsigned int reconnectAttempts = 0;
@@ -116,8 +115,6 @@ private:
     String statusTempSht = "init";
     String statusHumSht = "init";
     String statusPm = "init";
-
-    int firstValidPpm = -1;
 
     void publishAllConfigs();
 };

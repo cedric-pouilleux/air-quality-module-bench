@@ -7,26 +7,6 @@ struct DhtReading {
     bool valid;
 };
 
-struct SensorData {
-    float co2;
-    float temperature;
-    float humidity;
-    float vocIndex;
-    float pressure;
-    float temperature_bmp;
-    float pm1;
-    float pm25;
-    float pm4;
-    float pm10;
-    int eco2;
-    int tvoc;
-    float temperature_sht;
-    float humidity_sht;
-    
-    // Status tracking (true if last read was successful)
-    bool co2Valid;
-};
-
 struct SystemInfo {
     int flashTotal;
     int flashUsed;
