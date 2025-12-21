@@ -1,4 +1,5 @@
 #include "MqttHandler.h"
+#include <Preferences.h>
 
 MqttHandler::MqttHandler(SensorReader& reader, SensorConfig& config)
     : _reader(reader), _config(config) {
@@ -19,6 +20,8 @@ void MqttHandler::handleMessage(char* topic, byte* payload, unsigned int length)
         handleConfigMessage(msg);
     } else if (topicStr.endsWith("/sensors/reset")) {
         handleResetMessage(msg);
+    } else if (topicStr.endsWith("/sensors/enable")) {
+        handleEnableMessage(msg);
     }
 }
 
@@ -146,4 +149,90 @@ void MqttHandler::handleResetMessage(char* msg) {
     if (sensor == "sht" || sensor == "temp_sht" || sensor == "hum_sht" || sensor == "all") {
         _reader.resetSHT();
     }
+}
+
+// ============================================================================
+// Hardware Enable/Disable Handler
+// ============================================================================
+
+void MqttHandler::handleEnableMessage(char* msg) {
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, msg);
+    
+    if (error) {
+        if (_logger) {
+            char errMsg[64];
+            snprintf(errMsg, sizeof(errMsg), "Enable parse error: %s", error.f_str());
+            _logger->error(errMsg);
+        }
+        return;
+    }
+    
+    if (!doc.containsKey("hardware") || !doc.containsKey("enabled")) return;
+    
+    const char* hardware = doc["hardware"];
+    bool enabled = doc["enabled"];
+    
+    // Map hardware key to config flag
+    if (strcmp(hardware, "dht22") == 0) {
+        _config.dht22Enabled = enabled;
+    } else if (strcmp(hardware, "bmp280") == 0) {
+        _config.bmp280Enabled = enabled;
+    } else if (strcmp(hardware, "sgp40") == 0) {
+        _config.sgp40Enabled = enabled;
+    } else if (strcmp(hardware, "sgp30") == 0) {
+        _config.sgp30Enabled = enabled;
+    } else if (strcmp(hardware, "sps30") == 0) {
+        _config.sps30Enabled = enabled;
+    } else if (strcmp(hardware, "sht40") == 0) {
+        _config.sht40Enabled = enabled;
+    } else if (strcmp(hardware, "mhz14a") == 0) {
+        _config.mhz14aEnabled = enabled;
+    } else if (strcmp(hardware, "sc16co") == 0) {
+        _config.sc16coEnabled = enabled;
+    } else {
+        if (_logger) {
+            char logMsg[64];
+            snprintf(logMsg, sizeof(logMsg), "Unknown hardware: %s", hardware);
+            _logger->warn(logMsg);
+        }
+        return;
+    }
+    
+    // Persist to flash
+    saveEnabledState();
+    
+    if (_logger) {
+        char logMsg[48];
+        snprintf(logMsg, sizeof(logMsg), "%s %s", hardware, enabled ? "enabled" : "disabled");
+        _logger->info(logMsg);
+    }
+}
+
+void MqttHandler::saveEnabledState() {
+    Preferences prefs;
+    prefs.begin("hw_enabled", false);
+    prefs.putBool("dht22", _config.dht22Enabled);
+    prefs.putBool("bmp280", _config.bmp280Enabled);
+    prefs.putBool("sgp40", _config.sgp40Enabled);
+    prefs.putBool("sgp30", _config.sgp30Enabled);
+    prefs.putBool("sps30", _config.sps30Enabled);
+    prefs.putBool("sht40", _config.sht40Enabled);
+    prefs.putBool("mhz14a", _config.mhz14aEnabled);
+    prefs.putBool("sc16co", _config.sc16coEnabled);
+    prefs.end();
+}
+
+void MqttHandler::loadEnabledState() {
+    Preferences prefs;
+    prefs.begin("hw_enabled", true);  // Read-only
+    _config.dht22Enabled = prefs.getBool("dht22", true);
+    _config.bmp280Enabled = prefs.getBool("bmp280", true);
+    _config.sgp40Enabled = prefs.getBool("sgp40", true);
+    _config.sgp30Enabled = prefs.getBool("sgp30", true);
+    _config.sps30Enabled = prefs.getBool("sps30", true);
+    _config.sht40Enabled = prefs.getBool("sht40", true);
+    _config.mhz14aEnabled = prefs.getBool("mhz14a", true);
+    _config.sc16coEnabled = prefs.getBool("sc16co", true);
+    prefs.end();
 }

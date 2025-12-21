@@ -250,6 +250,9 @@ void NetworkManager::setupMqttCallbacks() {
         String resetTopic = String(fullTopic) + "/sensors/reset";
         mqttClient.subscribe(resetTopic.c_str(), 1);
 
+        String enableTopic = String(fullTopic) + "/sensors/enable";
+        mqttClient.subscribe(enableTopic.c_str(), 1);
+
         if (onMqttConnectedCallback) {
             onMqttConnectedCallback();
         }

@@ -35,6 +35,9 @@ void AppController::initHardware() {
 void AppController::initNetwork() {
     network.onMqttConnectedCallback = staticOnMqttConnected;
     network.setCallback(staticMqttCallback);
+    
+    // Load enabled state from flash
+    mqttHandler.loadEnabledState();
 }
 
 void AppController::setupLogger() {
@@ -170,6 +173,8 @@ bool AppController::isNetworkReady() {
 // ================= SENSOR HANDLERS =================
 
 void AppController::handleMHZ14A() {
+    if (!sensorConfig.mhz14aEnabled) return;  // Skip if disabled
+    
     unsigned long now = millis();
     if (now - lastCo2ReadTime >= sensorConfig.co2Interval) {
         lastCo2ReadTime = now;
@@ -205,6 +210,8 @@ void AppController::handleMHZ14A() {
 }
 
 void AppController::handleDHT22() {
+    if (!sensorConfig.dht22Enabled) return;  // Skip if disabled
+    
     unsigned long now = millis();
     bool readTemp = (now - lastTempReadTime >= sensorConfig.tempInterval);
     bool readHum = (now - lastHumReadTime >= sensorConfig.humInterval);
@@ -245,6 +252,8 @@ void AppController::handleDHT22() {
 }
 
 void AppController::handleSGP40() {
+    if (!sensorConfig.sgp40Enabled) return;  // Skip if disabled
+    
     unsigned long now = millis();
     if (now - lastVocReadTime >= sensorConfig.vocInterval) {
         lastVocReadTime = now;
@@ -283,6 +292,8 @@ void AppController::handleSGP40() {
 }
 
 void AppController::handleSGP30() {
+    if (!sensorConfig.sgp30Enabled) return;  // Skip if disabled
+    
     unsigned long now = millis();
     
     // 1. Hardware Read (Must be 1Hz for SGP30 baseline algorithm)
@@ -326,6 +337,8 @@ void AppController::handleSGP30() {
 }
 
 void AppController::handleSPS30() {
+    if (!sensorConfig.sps30Enabled) return;  // Skip if disabled
+    
     unsigned long now = millis();
     if (now - lastPmReadTime >= sensorConfig.pmInterval) {
         lastPmReadTime = now;
@@ -363,6 +376,8 @@ void AppController::handleSPS30() {
 }
 
 void AppController::handleBMP280() {
+    if (!sensorConfig.bmp280Enabled) return;  // Skip if disabled
+    
     unsigned long now = millis();
     if (now - lastPressureReadTime >= sensorConfig.pressureInterval) {
         lastPressureReadTime = now;
@@ -400,13 +415,27 @@ void AppController::handleSystemStatus() {
         publishAllConfigs();
         if (lastCO2Value > 0) {
             statusPublisher.publishSystemInfo();
-            statusPublisher.publishSensorStatus(lastCO2Value, statusCo2, 
-                                                lastCoValue, statusCo,
-                                                lastTemperature, lastHumidity, statusDht, 
-                                                lastVocValue, statusVoc, lastPressure, statusPressure, lastTempBmp, statusTempBmp,
-                                                lastPm1, lastPm25, lastPm4, lastPm10, statusPm,
-                                                lastEco2Value, statusEco2, lastTvocValue, statusTvoc,
-                                                lastTempSht, statusTempSht, lastHumSht, statusHumSht);
+            
+            // Build effective status strings - "disabled" if hardware is off
+            String effStatusDht = sensorConfig.dht22Enabled ? statusDht : "disabled";
+            String effStatusCo2 = sensorConfig.mhz14aEnabled ? statusCo2 : "disabled";
+            String effStatusCo = sensorConfig.sc16coEnabled ? statusCo : "disabled";
+            String effStatusVoc = sensorConfig.sgp40Enabled ? statusVoc : "disabled";
+            String effStatusEco2 = sensorConfig.sgp30Enabled ? statusEco2 : "disabled";
+            String effStatusTvoc = sensorConfig.sgp30Enabled ? statusTvoc : "disabled";
+            String effStatusPressure = sensorConfig.bmp280Enabled ? statusPressure : "disabled";
+            String effStatusTempBmp = sensorConfig.bmp280Enabled ? statusTempBmp : "disabled";
+            String effStatusPm = sensorConfig.sps30Enabled ? statusPm : "disabled";
+            String effStatusTempSht = sensorConfig.sht40Enabled ? statusTempSht : "disabled";
+            String effStatusHumSht = sensorConfig.sht40Enabled ? statusHumSht : "disabled";
+            
+            statusPublisher.publishSensorStatus(lastCO2Value, effStatusCo2, 
+                                                lastCoValue, effStatusCo,
+                                                lastTemperature, lastHumidity, effStatusDht, 
+                                                lastVocValue, effStatusVoc, lastPressure, effStatusPressure, lastTempBmp, effStatusTempBmp,
+                                                lastPm1, lastPm25, lastPm4, lastPm10, effStatusPm,
+                                                lastEco2Value, effStatusEco2, lastTvocValue, effStatusTvoc,
+                                                lastTempSht, effStatusTempSht, lastHumSht, effStatusHumSht);
             if (lastVocValue >= 0) network.publishHardwareValue("sgp40", "voc", lastVocValue);
         }
     }
@@ -414,13 +443,27 @@ void AppController::handleSystemStatus() {
     if (now - lastSystemInfoTime >= 5000) {
         lastSystemInfoTime = now;
         statusPublisher.publishSystemInfo();
-        statusPublisher.publishSensorStatus(lastCO2Value, statusCo2, 
-                                            lastCoValue, statusCo,
-                                            lastTemperature, lastHumidity, statusDht, 
-                                            lastVocValue, statusVoc, lastPressure, statusPressure, lastTempBmp, statusTempBmp,
-                                            lastPm1, lastPm25, lastPm4, lastPm10, statusPm,
-                                            lastEco2Value, statusEco2, lastTvocValue, statusTvoc,
-                                            lastTempSht, statusTempSht, lastHumSht, statusHumSht);
+        
+        // Build effective status strings - "disabled" if hardware is off
+        String effStatusDht = sensorConfig.dht22Enabled ? statusDht : "disabled";
+        String effStatusCo2 = sensorConfig.mhz14aEnabled ? statusCo2 : "disabled";
+        String effStatusCo = sensorConfig.sc16coEnabled ? statusCo : "disabled";
+        String effStatusVoc = sensorConfig.sgp40Enabled ? statusVoc : "disabled";
+        String effStatusEco2 = sensorConfig.sgp30Enabled ? statusEco2 : "disabled";
+        String effStatusTvoc = sensorConfig.sgp30Enabled ? statusTvoc : "disabled";
+        String effStatusPressure = sensorConfig.bmp280Enabled ? statusPressure : "disabled";
+        String effStatusTempBmp = sensorConfig.bmp280Enabled ? statusTempBmp : "disabled";
+        String effStatusPm = sensorConfig.sps30Enabled ? statusPm : "disabled";
+        String effStatusTempSht = sensorConfig.sht40Enabled ? statusTempSht : "disabled";
+        String effStatusHumSht = sensorConfig.sht40Enabled ? statusHumSht : "disabled";
+        
+        statusPublisher.publishSensorStatus(lastCO2Value, effStatusCo2, 
+                                            lastCoValue, effStatusCo,
+                                            lastTemperature, lastHumidity, effStatusDht, 
+                                            lastVocValue, effStatusVoc, lastPressure, effStatusPressure, lastTempBmp, effStatusTempBmp,
+                                            lastPm1, lastPm25, lastPm4, lastPm10, effStatusPm,
+                                            lastEco2Value, effStatusEco2, lastTvocValue, effStatusTvoc,
+                                            lastTempSht, effStatusTempSht, lastHumSht, effStatusHumSht);
     }
 }
 
@@ -439,6 +482,8 @@ void AppController::onMqttConnected() {
 }
 
 void AppController::handleSHT3x() {
+    if (!sensorConfig.sht40Enabled) return;  // Skip if disabled
+    
     unsigned long now = millis();
     if (now - lastShtReadTime >= sensorConfig.shtInterval) {
         lastShtReadTime = now;
@@ -483,6 +528,8 @@ void AppController::publishAllConfigs() {
 }
 
 void AppController::handleSC16CO() {
+    if (!sensorConfig.sc16coEnabled) return;  // Skip if disabled
+    
     unsigned long now = millis();
     if (now - lastCoReadTime >= sensorConfig.coInterval) {
         lastCoReadTime = now;

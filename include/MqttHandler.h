@@ -27,6 +27,11 @@ public:
      * @param length Payload length
      */
     void handleMessage(char* topic, byte* payload, unsigned int length);
+    
+    /**
+     * @brief Load enabled state from flash on startup
+     */
+    void loadEnabledState();
 
 private:
     SensorReader& _reader;
@@ -35,7 +40,11 @@ private:
 
     void handleConfigMessage(char* msg);
     void handleResetMessage(char* msg);
+    void handleEnableMessage(char* msg);
     bool updateInterval(JsonObject& sensors, const char* key, unsigned long* configValue);
+    
+    // Flash persistence for enabled state
+    void saveEnabledState();
 };
 
 #endif
