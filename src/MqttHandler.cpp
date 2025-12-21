@@ -56,30 +56,64 @@ void MqttHandler::handleConfigMessage(char* msg) {
     
     JsonObject sensors = doc["sensors"];
     
-    updateInterval(sensors, "co2", &_config.co2Interval);
-    updateInterval(sensors, "temperature", &_config.tempInterval);
-    updateInterval(sensors, "humidity", &_config.humInterval);
-    updateInterval(sensors, "voc", &_config.vocInterval);
-    updateInterval(sensors, "pressure", &_config.pressureInterval);
-    updateInterval(sensors, "eco2", &_config.eco2Interval);
-    updateInterval(sensors, "tvoc", &_config.tvocInterval);
-    updateInterval(sensors, "co", &_config.coInterval);
-    
-    // PM sensors share the same interval (SPS30 reads all PM values at once)
-    if (updateInterval(sensors, "pm1", &_config.pmInterval)) {
-        // Already updated
-    } else if (updateInterval(sensors, "pm25", &_config.pmInterval)) {
-        // Already updated
-    } else if (updateInterval(sensors, "pm4", &_config.pmInterval)) {
-        // Already updated
-    } else {
-        updateInterval(sensors, "pm10", &_config.pmInterval);
+    // CO2
+    if (!updateInterval(sensors, "mhz14a:co2", &_config.co2Interval)) {
+        updateInterval(sensors, "co2", &_config.co2Interval);
+    }
+
+    // DHT22 (Temp/Hum independent)
+    if (!updateInterval(sensors, "dht22:temperature", &_config.tempInterval)) {
+        updateInterval(sensors, "temperature", &_config.tempInterval);
+    }
+    if (!updateInterval(sensors, "dht22:humidity", &_config.humInterval)) {
+        updateInterval(sensors, "humidity", &_config.humInterval);
+    }
+
+    // SGP40
+    if (!updateInterval(sensors, "sgp40:voc", &_config.vocInterval)) {
+        updateInterval(sensors, "voc", &_config.vocInterval);
+    }
+
+    // BMP280 (Uses pressureInterval for loop timing)
+    if (updateInterval(sensors, "bmp280:temperature", &_config.pressureInterval)) {}
+    else if (updateInterval(sensors, "bmp280:pressure", &_config.pressureInterval)) {}
+    else {
+        updateInterval(sensors, "pressure", &_config.pressureInterval);
+    }
+
+    // SGP30
+    if (!updateInterval(sensors, "sgp30:eco2", &_config.eco2Interval)) {
+        updateInterval(sensors, "eco2", &_config.eco2Interval);
+    }
+    if (!updateInterval(sensors, "sgp30:tvoc", &_config.tvocInterval)) {
+        updateInterval(sensors, "tvoc", &_config.tvocInterval);
+    }
+
+    // SC16-CO
+    if (!updateInterval(sensors, "sc16co:co", &_config.coInterval)) {
+        updateInterval(sensors, "co", &_config.coInterval);
     }
     
-    // SHT shares interval for temp and hum
-    if (updateInterval(sensors, "temp_sht", &_config.shtInterval)) {
-        // Already updated
-    } else {
+    // PM sensors (SPS30)
+    if (updateInterval(sensors, "sps30:pm1", &_config.pmInterval)) {}
+    else if (updateInterval(sensors, "sps30:pm25", &_config.pmInterval)) {}
+    else if (updateInterval(sensors, "sps30:pm4", &_config.pmInterval)) {}
+    else if (updateInterval(sensors, "sps30:pm10", &_config.pmInterval)) {}
+    else {
+        // Legacy PM keys
+        if (updateInterval(sensors, "pm1", &_config.pmInterval)) {}
+        else if (updateInterval(sensors, "pm25", &_config.pmInterval)) {}
+        else if (updateInterval(sensors, "pm4", &_config.pmInterval)) {}
+        else {
+             updateInterval(sensors, "pm10", &_config.pmInterval);
+        }
+    }
+    
+    // SHT (Temp & Hum shared)
+    if (updateInterval(sensors, "sht40:temperature", &_config.shtInterval)) {}
+    else if (updateInterval(sensors, "sht40:humidity", &_config.shtInterval)) {}
+    else if (updateInterval(sensors, "temp_sht", &_config.shtInterval)) {}
+    else {
         updateInterval(sensors, "hum_sht", &_config.shtInterval);
     }
 }

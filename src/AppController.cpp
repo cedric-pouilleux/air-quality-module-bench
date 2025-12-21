@@ -177,7 +177,7 @@ void AppController::handleMHZ14A() {
         if (ppm >= 0) {
             lastCO2Value = ppm;
             statusCo2 = "ok";
-            network.publishCO2(ppm);
+            network.publishHardwareValue("mhz14a", "co2", ppm);
             if (logger) {
                 char msg[48]; snprintf(msg, sizeof(msg), "CO2: %d ppm", ppm);
                 logger->info(msg);
@@ -253,7 +253,7 @@ void AppController::handleSGP40() {
         
         if (voc >= 0) {
             statusVoc = "ok";
-            network.publishVocIndex(voc);
+            network.publishHardwareValue("sgp40", "voc", voc);
             if (logger) {
                 char msg[32]; snprintf(msg, sizeof(msg), "VOC: %d", voc);
                 logger->info(msg);
@@ -407,7 +407,7 @@ void AppController::handleSystemStatus() {
                                                 lastPm1, lastPm25, lastPm4, lastPm10, statusPm,
                                                 lastEco2Value, statusEco2, lastTvocValue, statusTvoc,
                                                 lastTempSht, statusTempSht, lastHumSht, statusHumSht);
-            if (lastVocValue >= 0) network.publishVocIndex(lastVocValue);
+            if (lastVocValue >= 0) network.publishHardwareValue("sgp40", "voc", lastVocValue);
         }
     }
 
@@ -492,7 +492,7 @@ void AppController::handleSC16CO() {
             lastCoValue = co;
             statusCo = "ok";
             errCo = 0;
-            network.publishHardwareValue("mq7", "co", (float)co);
+            network.publishHardwareValue("sc16co", "co", (float)co);
             if (logger) {
                 char msg[48]; snprintf(msg, sizeof(msg), "CO: %d ppm", co);
                 logger->info(msg);
