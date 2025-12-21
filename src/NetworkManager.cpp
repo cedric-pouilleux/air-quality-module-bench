@@ -72,24 +72,18 @@ void NetworkManager::setCallback(void (*callback)(char*, uint8_t*, unsigned int)
     }
 }
 
-void NetworkManager::publishCO2(int ppm) {
-    if (!mqttClient.connected()) {
-        return;
-    }
-    String topic = String(fullTopic) + "/co2";
-    mqttClient.publish(topic.c_str(), 0, false, String(ppm).c_str());
-}
-
-void NetworkManager::publishVocIndex(int vocIndex) {
+void NetworkManager::publishHardwareValue(const char* hardwareId, const char* measurement, float value) {
     if (!mqttClient.connected()) return;
-    String topic = String(fullTopic) + "/voc";
-    mqttClient.publish(topic.c_str(), 0, false, String(vocIndex).c_str());
-}
-
-void NetworkManager::publishValue(const char* suffix, float value) {
-    if (!mqttClient.connected()) return;
-    String topic = String(fullTopic) + suffix;
+    // New format: {module}/{hardwareId}/{measurement}
+    String topic = String(fullTopic) + "/" + hardwareId + "/" + measurement;
     mqttClient.publish(topic.c_str(), 0, false, String(value, 1).c_str());
+}
+
+void NetworkManager::publishHardwareValue(const char* hardwareId, const char* measurement, int value) {
+    if (!mqttClient.connected()) return;
+    // New format: {module}/{hardwareId}/{measurement}
+    String topic = String(fullTopic) + "/" + hardwareId + "/" + measurement;
+    mqttClient.publish(topic.c_str(), 0, false, String(value).c_str());
 }
 
 bool NetworkManager::publishMessage(const char* suffix, const char* payload, bool retained) {

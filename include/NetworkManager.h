@@ -84,9 +84,17 @@ public:
     void setCallback(void (*callback)(char*, uint8_t*, unsigned int));
 
     // Publishing methods
-    void publishCO2(int ppm);
-    void publishVocIndex(int vocIndex);
-    void publishValue(const char* suffix, float value);
+
+    /**
+     * @brief Publishes a sensor value with hardware-aware topic format
+     * @param hardwareId Hardware sensor ID (e.g., "dht22", "bmp280")
+     * @param measurement Measurement type (e.g., "temperature", "humidity")
+     * @param value The sensor value to publish
+     * Topic format: {module}/{hardwareId}/{measurement}
+     */
+    void publishHardwareValue(const char* hardwareId, const char* measurement, float value);
+    void publishHardwareValue(const char* hardwareId, const char* measurement, int value);
+    
     bool publishMessage(const char* suffix, const char* payload, bool retained = false);
 
     // Getters

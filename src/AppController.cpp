@@ -45,7 +45,7 @@ void AppController::setupLogger() {
     if (logger) {
         if (WiFi.status() == WL_CONNECTED) {
             char wifiInfo[128];
-            snprintf(wifiInfo, sizeof(wifiInfo), "✓ WiFi connected - IP: %s, MAC: %s", 
+            snprintf(wifiInfo, sizeof(wifiInfo), "WiFi connected - IP: %s, MAC: %s", 
                      WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str());
             logger->success(wifiInfo);
         }
@@ -68,15 +68,15 @@ void AppController::initSensors() {
     // Initialize second I2C bus for SGP40 with auto-correction
     Wire1.begin(32, 33);     // Default: SDA=32, SCL=33
     int devicesWire1 = sensorReader.scanI2C(Wire1, "Wire1 (SGP40) [32,33]");
-    
+     
     // If no devices found on Wire1, try swapping pins
     if (devicesWire1 == 0) {
-        if (logger) logger->warn("⚠️ No devices on Wire1 (32,33), trying swap (33,32)...");
+        if (logger) logger->warn("No devices on Wire1 (32,33), trying swap (33,32)...");
         Wire1.begin(33, 32); // Swap: SDA=33, SCL=32
         devicesWire1 = sensorReader.scanI2C(Wire1, "Wire1 (SGP40) [33,32] - SWAPPED");
         
         if (devicesWire1 > 0) {
-            if (logger) logger->success("✅ Devices found after swapping pins! Please update wiring or config.");
+            if (logger) logger->success("Devices found after swapping pins! Please update wiring or config.");
         } else {
             // Revert to default if still nothing, to match documentation
             Wire1.begin(32, 33);
@@ -95,26 +95,26 @@ void AppController::initSensors() {
     bool coOk = sensorReader.initCO();
 
     if (logger) {
-        if (bmpOk) logger->success("✓ BMP280 initialized");
-        else logger->error("✗ BMP280 init failed");
+        if (bmpOk) logger->success("BMP280 initialized");
+        else logger->error("BMP280 init failed");
 
-        if (sgpOk) logger->success("✓ SGP40 initialized");
-        else logger->error("✗ SGP40 init failed");
+        if (sgpOk) logger->success("SGP40 initialized");
+        else logger->error("SGP40 init failed");
 
-        if (sgp30Ok) logger->success("✓ SGP30 initialized");
-        else logger->error("✗ SGP30 init failed");
+        if (sgp30Ok) logger->success("SGP30 initialized");
+        else logger->error("SGP30 init failed");
 
-        if (sps30Ok) logger->success("✓ SPS30 (PM) initialized");
-        else logger->error("✗ SPS30 init failed");
+        if (sps30Ok) logger->success("SPS30 (PM) initialized");
+        else logger->error("SPS30 init failed");
 
-        if (shtOk) logger->success("✓ SHT3x initialized");
-        else logger->error("✗ SHT3x init failed");
+        if (shtOk) logger->success("SHT3x initialized");
+        else logger->error("SHT3x init failed");
         
-        if (coOk) logger->success("✓ SC16-CO initialized");
-        else logger->warn("⚠ SC16-CO not detected (will retry)");
+        if (coOk) logger->success("SC16-CO initialized");
+        else logger->warn("SC16-CO not detected (will retry)");
         
-        logger->success("✓ MH-Z14A (CO2) Serial initialized");
-        logger->success("✓ DHT22 Sensor initialized");
+        logger->success("MH-Z14A (CO2) Serial initialized");
+        logger->success("DHT22 Sensor initialized");
         logger->info("System ready - waiting for MQTT connection");
     }
 
@@ -179,26 +179,26 @@ void AppController::handleMHZ14A() {
             statusCo2 = "ok";
             network.publishCO2(ppm);
             if (logger) {
-                char msg[48]; snprintf(msg, sizeof(msg), "📤 CO2: %d ppm", ppm);
+                char msg[48]; snprintf(msg, sizeof(msg), "CO2: %d ppm", ppm);
                 logger->info(msg);
             }
         } else {
              errCo2++;
              if (errCo2 > 5) {
-                 if (logger) logger->warn("⚠️ CO2 self-healing: Resetting sensor...");
+                 if (logger) logger->warn("CO2 self-healing: Resetting sensor...");
                  sensorReader.resetCO2();
                  errCo2 = 0;
              }
             
             if (ppm == -1) {
                 statusCo2 = "missing";
-                if (logger) logger->error("✗ CO2 sensor missing (timeout)");
+                if (logger) logger->error("CO2 sensor missing (timeout)");
             } else if (ppm == -4) {
                 statusCo2 = "error";
-                if (logger) logger->error("✗ CO2 sensor checksum error");
+                if (logger) logger->error("CO2 sensor checksum error");
             } else {
                 statusCo2 = "error";
-                if (logger) logger->error("✗ CO2 sensor read error (code: " + String(ppm) + ")");
+                if (logger) logger->error("CO2 sensor read error (code: " + String(ppm) + ")");
             }
         }
     }
@@ -219,24 +219,24 @@ void AppController::handleDHT22() {
             errDht = 0;
             if (readTemp) {
                 lastTempReadTime = now;
-                network.publishValue("/temperature", reading.temperature);
+                network.publishHardwareValue("dht22", "temperature", reading.temperature);
                 if (logger) {
-                    char msg[48]; snprintf(msg, sizeof(msg), "📤 Temperature: %.1f°C", reading.temperature);
+                    char msg[48]; snprintf(msg, sizeof(msg), "Temperature: %.1f°C", reading.temperature);
                     logger->info(msg);
                 }
             }
             if (readHum) {
                 lastHumReadTime = now;
-                network.publishValue("/humidity", reading.humidity);
+                network.publishHardwareValue("dht22", "humidity", reading.humidity);
                 if (logger) {
-                    char msg[48]; snprintf(msg, sizeof(msg), "📤 Humidity: %.1f%%", reading.humidity);
+                    char msg[48]; snprintf(msg, sizeof(msg), "Humidity: %.1f%%", reading.humidity);
                     logger->info(msg);
                 }
             }
         } else {
              errDht++;
              if (errDht > 10) {
-                 if (logger) logger->warn("⚠️ DHT self-healing: Resetting sensor...");
+                 if (logger) logger->warn("DHT self-healing: Resetting sensor...");
                  sensorReader.resetDHT();
                  errDht = 0;
              }
@@ -255,14 +255,14 @@ void AppController::handleSGP40() {
             statusVoc = "ok";
             network.publishVocIndex(voc);
             if (logger) {
-                char msg[32]; snprintf(msg, sizeof(msg), "📤 VOC: %d", voc);
+                char msg[32]; snprintf(msg, sizeof(msg), "VOC: %d", voc);
                 logger->info(msg);
             }
         } else {
             // Self-healing for SGP40
             errSgp40++;
             if (errSgp40 > 5) {
-                if (logger) logger->warn("⚠️ SGP40 self-healing: Resetting sensor...");
+                if (logger) logger->warn("SGP40 self-healing: Resetting sensor...");
                 if (sensorReader.resetSGP()) {
                     errSgp40 = 0; 
                 }
@@ -273,10 +273,10 @@ void AppController::handleSGP40() {
                 statusVoc = "missing";
                 // Only log error if status just changed or periodically? 
                 // For now, consistent with other sensors: logging error every attempt might be spammy but standard here.
-                if (logger) logger->error("✗ SGP40 sensor missing (disconnected)");
+                if (logger) logger->error("SGP40 sensor missing (disconnected)");
             } else {
                 statusVoc = "error";
-                if (logger) logger->error("✗ SGP40 sensor processing error");
+                if (logger) logger->error("SGP40 sensor processing error");
             }
         }
     }
@@ -296,17 +296,11 @@ void AppController::handleSGP30() {
             statusEco2 = "ok";
             statusTvoc = "ok";
         } else {
-            // Only log error periodically or if it persists?
-            // For now, keep it simple. If 1Hz logging is too much, user will see.
-            // But since we only publish on interval, maybe we should suppress 1Hz error logs?
-            // Let's keep it but maybe it will spam if sensor is missing.
             statusEco2 = "error";
             statusTvoc = "error";
-            // if (logger) logger->error("✗ SGP30 read failed"); // Commented out to reduce spam if missing
-            
             errSgp30++;
             if (errSgp30 > 10) {
-                 if (logger) logger->warn("⚠️ SGP30 self-healing: Resetting sensor...");
+                 if (logger) logger->warn("SGP30 self-healing: Resetting sensor...");
                  sensorReader.resetSGP(); 
                  errSgp30 = 0;
             }
@@ -318,15 +312,15 @@ void AppController::handleSGP30() {
         lastSgp30PublishTime = now;
         
         if (statusEco2 == "ok") {
-            network.publishValue("/eco2", lastEco2Value);
-            network.publishValue("/tvoc", lastTvocValue);
+            network.publishHardwareValue("sgp30", "eco2", lastEco2Value);
+            network.publishHardwareValue("sgp30", "tvoc", lastTvocValue);
             
             if (logger) {
-                char msg[64]; snprintf(msg, sizeof(msg), "📤 eCO2: %d ppm, TVOC: %d ppb", lastEco2Value, lastTvocValue);
+                char msg[64]; snprintf(msg, sizeof(msg), "eCO2: %d ppm, TVOC: %d ppb", lastEco2Value, lastTvocValue);
                 logger->info(msg);
             }
         } else {
-             if (logger) logger->error("✗ SGP30 not ready or read failed");
+             if (logger) logger->error("SGP30 not ready or read failed");
         }
     }
 }
@@ -345,22 +339,22 @@ void AppController::handleSPS30() {
             statusPm = "ok";
             
             // Assuming network.publishValue is generic enough or we simply publish as floats
-            network.publishValue("/pm1", pm1);
-            network.publishValue("/pm25", pm25);
-            network.publishValue("/pm4", pm4);
-            network.publishValue("/pm10", pm10);
+            network.publishHardwareValue("sps30", "pm1", pm1);
+            network.publishHardwareValue("sps30", "pm25", pm25);
+            network.publishHardwareValue("sps30", "pm4", pm4);
+            network.publishHardwareValue("sps30", "pm10", pm10);
             
             if (logger) {
-                char msg[64]; 
-                snprintf(msg, sizeof(msg), "📤 PM2.5: %.1f, PM10: %.1f", pm25, pm10);
+                char msg[96]; 
+                snprintf(msg, sizeof(msg), "PM1: %.0f, PM2.5: %.0f, PM4: %.0f, PM10: %.0f", pm1, pm25, pm4, pm10);
                 logger->info(msg);
             }
         } else {
             statusPm = "error";
-            if (logger) logger->error("✗ SPS30 read failed");
+            if (logger) logger->error("SPS30 read failed");
             
             if (errSps30 > 3) {
-                if (logger) logger->warn("⚠️ SPS30 self-healing: Resetting sensor...");
+                if (logger) logger->warn("SPS30 self-healing: Resetting sensor...");
                 sensorReader.initSPS30(1, 100);
                 errSps30 = 0;
             }
@@ -381,16 +375,16 @@ void AppController::handleBMP280() {
         
         if (!isnan(pressure)) {
             errBmp = 0;
-            network.publishValue("/pressure", pressure);
-            network.publishValue("/temperature_bmp", tempBmp);
+            network.publishHardwareValue("bmp280", "pressure", pressure);
+            network.publishHardwareValue("bmp280", "temperature", tempBmp);
             if (logger) {
-                char msg[96]; snprintf(msg, sizeof(msg), "📤 Pressure: %.1f hPa, TempBMP: %.1f°C", pressure, tempBmp);
+                char msg[96]; snprintf(msg, sizeof(msg), "Pressure: %.1f hPa, TempBMP: %.1f°C", pressure, tempBmp);
                 logger->info(msg);
             }
         } else {
              errBmp++;
              if (errBmp > 5) {
-                 if (logger) logger->warn("⚠️ BMP280 self-healing: Resetting sensor...");
+                 if (logger) logger->warn("BMP280 self-healing: Resetting sensor...");
                  sensorReader.resetBMP();
                  errBmp = 0;
              }
@@ -439,7 +433,7 @@ void AppController::onMqttConnected() {
     mqttJustConnected = true;
     if (logger) {
         logger->flushBufferedLogs();
-        logger->success("✓ MQTT connected");
+        logger->success("MQTT connected");
     }
     reconnectAttempts = 0;
 }
@@ -456,11 +450,11 @@ void AppController::handleSHT3x() {
             statusTempSht = "ok";
             statusHumSht = "ok";
             
-            network.publishValue("/temp_sht", temp);
-            network.publishValue("/hum_sht", hum);
+            network.publishHardwareValue("sht40", "temperature", temp);
+            network.publishHardwareValue("sht40", "humidity", hum);
             
             if (logger) {
-                char msg[64]; snprintf(msg, sizeof(msg), "📤 SHT3x: %.1f°C, %.1f%%", temp, hum);
+                char msg[64]; snprintf(msg, sizeof(msg), "SHT3x: %.1f°C, %.1f%%", temp, hum);
                 logger->info(msg);
             }
         } else {
@@ -469,11 +463,11 @@ void AppController::handleSHT3x() {
             // Set to NAN so frontend treats it as invalid/missing (Red pill)
             lastTempSht = NAN;
             lastHumSht = NAN;
-            if (logger) logger->error("✗ SHT3x read failed");
+            if (logger) logger->error("SHT3x read failed");
             
             errSht++;
             if (errSht > 5) {
-                 if (logger) logger->warn("⚠️ SHT3x self-healing: Resetting sensor...");
+                 if (logger) logger->warn("SHT3x self-healing: Resetting sensor...");
                  sensorReader.resetSHT();
                  errSht = 0;
             }
@@ -498,26 +492,24 @@ void AppController::handleSC16CO() {
             lastCoValue = co;
             statusCo = "ok";
             errCo = 0;
-            network.publishValue("/co", co);
+            network.publishHardwareValue("mq7", "co", (float)co);
             if (logger) {
-                char msg[48]; snprintf(msg, sizeof(msg), "📤 CO: %d ppm", co);
+                char msg[48]; snprintf(msg, sizeof(msg), "CO: %d ppm", co);
                 logger->info(msg);
             }
         } else if (co == -1) {
-            // No data available - sensor might not be connected
             statusCo = "missing";
             errCo++;
             if (errCo > 10) {
-                if (logger) logger->warn("⚠️ SC16-CO no data: sensor missing?");
+                if (logger) logger->warn("SC16-CO no data: sensor missing?");
                 sensorReader.resetCOBuffer();
                 errCo = 0;
             }
         } else {
-            // Error reading
             statusCo = "error";
             errCo++;
             if (errCo > 5) {
-                if (logger) logger->warn("⚠️ SC16-CO self-healing: Resetting buffer...");
+                if (logger) logger->warn("SC16-CO self-healing: Resetting buffer...");
                 sensorReader.resetCOBuffer();
                 errCo = 0;
             }

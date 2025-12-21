@@ -63,6 +63,18 @@ void MqttHandler::handleConfigMessage(char* msg) {
     updateInterval(sensors, "pressure", &_config.pressureInterval);
     updateInterval(sensors, "eco2", &_config.eco2Interval);
     updateInterval(sensors, "tvoc", &_config.tvocInterval);
+    updateInterval(sensors, "co", &_config.coInterval);
+    
+    // PM sensors share the same interval (SPS30 reads all PM values at once)
+    if (updateInterval(sensors, "pm1", &_config.pmInterval)) {
+        // Already updated
+    } else if (updateInterval(sensors, "pm25", &_config.pmInterval)) {
+        // Already updated
+    } else if (updateInterval(sensors, "pm4", &_config.pmInterval)) {
+        // Already updated
+    } else {
+        updateInterval(sensors, "pm10", &_config.pmInterval);
+    }
     
     // SHT shares interval for temp and hum
     if (updateInterval(sensors, "temp_sht", &_config.shtInterval)) {
