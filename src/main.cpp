@@ -152,6 +152,61 @@ void setup() {
         Serial.printf("[MQTT] %s\n", connected ? "Connected" : "Disconnected");
     });
     
+    brain.onResetChange([](const char* hw) {
+        Serial.printf("[Reset] Request for: %s\n", hw);
+        brain.log("info", "Reset request received");
+        
+        bool success = false;
+        
+        if (strcmp(hw, "mhz14a") == 0) {
+            // MH-Z14A doesn't have a specific init, but we can try to re-setup serial or similar if needed.
+            // For now, re-init isn't explicitly exposed in SensorReader for CO2, 
+            // but we can add resetCO2 if we want to be thorough.
+            // Let's rely on what's available. 
+            // SensorReader has resetCO2() (void).
+            sensors.resetCO2();
+            success = true;
+        }
+        else if (strcmp(hw, "dht22") == 0) {
+           sensors.resetDHT();
+           success = true;
+        }
+        else if (strcmp(hw, "sgp40") == 0) {
+            success = sensors.initSGP();
+        }
+        else if (strcmp(hw, "sgp30") == 0) {
+            success = sensors.initSGP30();
+        }
+        else if (strcmp(hw, "sps30") == 0) {
+            success = sensors.initSPS30();
+        }
+        else if (strcmp(hw, "bmp280") == 0) {
+            success = sensors.initBMP();
+        }
+        else if (strcmp(hw, "sht40") == 0) {
+            success = sensors.initSHT();
+        }
+        else if (strcmp(hw, "sc16co") == 0) {
+            success = sensors.initCO();
+        }
+        else {
+             char msg[64];
+             snprintf(msg, sizeof(msg), "Unknown hardware: %s", hw);
+             brain.log("warn", msg);
+             return;
+        }
+        
+        if (success) {
+            char msg[64];
+            snprintf(msg, sizeof(msg), "Hardware reset: %s", hw);
+            brain.log("success", msg);
+        } else {
+             char msg[64];
+             snprintf(msg, sizeof(msg), "Reset failed: %s", hw);
+            brain.log("error", msg);
+        }
+    });
+    
     // Initialize sensors
     Serial.println("Initializing sensors...");
     dht.begin();
@@ -162,6 +217,7 @@ void setup() {
     if (sensors.initSHT()) Serial.println(" - SHT40 OK");
     if (sensors.initCO()) Serial.println(" - SC16-CO OK");
     
+    brain.log("info", "Module booted and connected");
     Serial.println("Setup complete!");
 }
 
@@ -176,6 +232,18 @@ bool shouldRead(SensorTiming& timing) {
         return true;
     }
     return false;
+}
+
+// ============================================================================
+// Logging Helper
+// ============================================================================
+
+void logError(const char* msg) {
+    // Log to Serial
+    Serial.printf("[ERROR] %s\n", msg);
+    
+    // Log to MQTT via brain
+    brain.log("error", msg);
 }
 
 // ============================================================================
@@ -199,6 +267,9 @@ void loop() {
         Serial.printf("[MHZ14A] CO2: %d\n", co2);
         if (co2 > 0) {
             brain.publish("mhz14a", "co2", co2);
+        } else {
+            Serial.println("[MHZ14A] Read failed!");
+            brain.publish("mhz14a", "co2", NAN);
         }
     }
     
@@ -206,11 +277,13 @@ void loop() {
     if (brain.isHardwareEnabled("dht22") && shouldRead(timingDHT22)) {
         DhtReading reading = sensors.readDhtSensors();
         Serial.printf("[DHT22] T: %.1f, H: %.1f\n", reading.temperature, reading.humidity);
-        if (!isnan(reading.temperature)) {
+        if (reading.valid) {
             brain.publish("dht22", "temperature", reading.temperature);
-        }
-        if (!isnan(reading.humidity)) {
             brain.publish("dht22", "humidity", reading.humidity);
+        } else {
+            Serial.println("[DHT22] Read failed!");
+            brain.publish("dht22", "temperature", NAN);
+            brain.publish("dht22", "humidity", NAN);
         }
     }
     
@@ -220,6 +293,9 @@ void loop() {
         Serial.printf("[SGP40] VOC: %d\n", voc);
         if (voc >= 0) {
             brain.publish("sgp40", "voc", voc);
+        } else {
+            Serial.println("[SGP40] Read failed!");
+            brain.publish("sgp40", "voc", NAN);
         }
     }
     
@@ -230,6 +306,11 @@ void loop() {
             Serial.printf("[SGP30] eCO2: %d, TVOC: %d\n", eco2, tvoc);
             brain.publish("sgp30", "eco2", eco2);
             brain.publish("sgp30", "tvoc", tvoc);
+        } else {
+            // Read failed or invalid (0) -> Report as missing
+            Serial.println("[SGP30] Read failed!");
+            brain.publish("sgp30", "eco2", NAN);
+            brain.publish("sgp30", "tvoc", NAN);
         }
     }
     
@@ -242,6 +323,12 @@ void loop() {
             brain.publish("sps30", "pm25", pm25);
             brain.publish("sps30", "pm4", pm4);
             brain.publish("sps30", "pm10", pm10);
+        } else {
+            Serial.println("[SPS30] Read failed!");
+            brain.publish("sps30", "pm1", NAN);
+            brain.publish("sps30", "pm25", NAN);
+            brain.publish("sps30", "pm4", NAN);
+            brain.publish("sps30", "pm10", NAN);
         }
     }
     
@@ -250,12 +337,23 @@ void loop() {
         float pressure = sensors.readPressure();
         float temp = sensors.readBMPTemperature();
         Serial.printf("[BMP280] P: %.1f, T: %.1f\n", pressure, temp);
+        
+        bool success = false;
         if (!isnan(pressure)) {
             brain.publish("bmp280", "pressure", pressure);
+            success = true;
+        } else {
+             brain.publish("bmp280", "pressure", NAN);
         }
+        
         if (!isnan(temp)) {
             brain.publish("bmp280", "temperature", temp);
+            success = true;
+        } else {
+            brain.publish("bmp280", "temperature", NAN);
         }
+        
+        if (!success) Serial.println("[BMP280] Read failed!");
     }
     
     // SHT40 (Temp/Humidity)
@@ -265,6 +363,10 @@ void loop() {
             Serial.printf("[SHT40] T: %.1f, H: %.1f\n", temp, hum);
             brain.publish("sht40", "temperature", temp);
             brain.publish("sht40", "humidity", hum);
+        } else {
+            Serial.println("[SHT40] Read failed!");
+            brain.publish("sht40", "temperature", NAN);
+            brain.publish("sht40", "humidity", NAN);
         }
     }
     
@@ -274,6 +376,9 @@ void loop() {
         Serial.printf("[SC16CO] CO: %d\n", co);
         if (co >= 0) {
             brain.publish("sc16co", "co", co);
+        } else {
+            Serial.println("[SC16CO] Read failed!");
+             brain.publish("sc16co", "co", NAN);
         }
     }
 }

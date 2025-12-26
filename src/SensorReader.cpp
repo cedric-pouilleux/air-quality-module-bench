@@ -30,7 +30,9 @@ bool SensorReader::initSGP(int maxAttempts, int delayBetweenMs) {
 bool SensorReader::initSGP30(int maxAttempts, int delayBetweenMs) {
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
         if (sgp30.begin(&_wireSGP)) {
-            return true;
+            if (sgp30.IAQinit()) {
+                return true;
+            }
         }
         if (attempt < maxAttempts) delay(delayBetweenMs);
     }
@@ -192,6 +194,17 @@ bool SensorReader::isBMPConnected() {
 bool SensorReader::readSGP30(int& eco2, int& tvoc) {
     if (!isSGP30Connected()) return false;
     if (!sgp30.IAQmeasure()) return false;
+
+    // Check for invalid values (0 indicates uninitialized state)
+    if (sgp30.eCO2 == 0) {
+        // Sensor answered but with 0 -> definitely uninitialized or broken
+        // Try to re-initialize immediately
+        if (sgp30.begin(&_wireSGP)) {
+            sgp30.IAQinit();
+        }
+        return false; // Don't use this reading
+    }
+
     eco2 = sgp30.eCO2;
     tvoc = sgp30.TVOC;
     return true;
