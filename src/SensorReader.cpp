@@ -342,6 +342,17 @@ bool SensorReader::initCO() {
 }
 
 int SensorReader::readCO() {
+    // Generic Winsen Request Command (0xFF 0x01 0x86 0x00 0x00 0x00 0x00 0x00 0x79)
+    // Try to request data in case sensor is not in auto-mode
+    uint8_t cmd[] = {0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79};
+    _coSerial.write(cmd, 9);
+    
+    // Wait a bit for response
+    unsigned long start = millis();
+    while (_coSerial.available() < 9 && millis() - start < 150) {
+        delay(10);
+    }
+
     int bytesAvailable = _coSerial.available();
     if (bytesAvailable == 0) {
         return -1; 
@@ -357,6 +368,18 @@ int SensorReader::readCO() {
         _coBuffer[_coBufferIndex++] = b;
         
         if (_coBufferIndex >= 9) {
+            // Debug: Print raw packet
+            Serial.printf("[SC16CO] Raw: %02X %02X %02X %02X %02X %02X %02X %02X %02X\n",
+                _coBuffer[0], _coBuffer[1], _coBuffer[2], _coBuffer[3],
+                _coBuffer[4], _coBuffer[5], _coBuffer[6], _coBuffer[7], _coBuffer[8]);
+
+            if (_coBuffer[0] == 0xFF && _coBuffer[1] == 0x04) {
+                // ...
+            } else {
+                 // Log invalid header
+                 Serial.printf("[SC16CO] Invalid Header: %02X %02X\n", _coBuffer[0], _coBuffer[1]);
+            }
+
             if (_coBuffer[0] == 0xFF && _coBuffer[1] == 0x04) {
                 uint8_t checksum = 0;
                 for (int i = 1; i < 8; i++) {

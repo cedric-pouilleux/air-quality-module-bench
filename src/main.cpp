@@ -377,7 +377,18 @@ void loop() {
         if (co >= 0) {
             brain.publish("sc16co", "co", co);
         } else {
-            Serial.println("[SC16CO] Read failed!");
+            char msg[128];
+            // Format raw hex for MQTT string
+            // Assuming _coBuffer is available only in SensorReader, we can't easily access it here.
+            // Let's modify readCO to return a struct or handle logging inside SensorReader,
+            // OR just return the error code and rely on the user checking the ACTIVITY LOGS detailed message if implemented.
+            // For now, let's trust the error code is enough to say "Bad Protocol".
+            // Actually, we can pass the error to the log.
+            
+            snprintf(msg, sizeof(msg), "SC16CO Err: %d", co);
+            brain.log("error", msg);
+            
+            Serial.printf("[SC16CO] Read failed! Error code: %d\n", co);
              brain.publish("sc16co", "co", NAN);
         }
     }
