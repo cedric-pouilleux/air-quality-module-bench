@@ -20,7 +20,7 @@ Firmware ESP32 pour module de surveillance de qualité de l'air. Publie les donn
    ```cpp
    #define WIFI_SSID "VotreSSID"
    #define WIFI_PASSWORD "VotreMotDePasse"
-   #define MODULE_ID "module-esp32-1"  // Identifiant unique du module
+   #define MODULE_ID "air-quality-benchmark"  // Identifiant unique du module
    ```
 
 3. **Configurer le serveur MQTT** dans `platformio.ini` :

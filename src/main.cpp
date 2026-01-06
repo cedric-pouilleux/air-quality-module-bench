@@ -34,8 +34,7 @@
 // ============================================================================
 
 #define DHT_TYPE DHT22
-#define MODULE_ID "module-esp32-1"
-#define MODULE_ID "module-esp32-1"
+#define MODULE_ID "air-quality-benchmark"
 
 // ============================================================================
 // Global Objects
