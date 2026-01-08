@@ -213,15 +213,26 @@ bool SensorReader::readSGP30(int& eco2, int& tvoc) {
 int SensorReader::readVocIndex() {
     if (!isSGPConnected()) return -1;
 
-    sensors_event_t temp, humidity;
-    dht.temperature().getEvent(&temp);
-    dht.humidity().getEvent(&humidity);
+    // Use SHT31 for temperature/humidity compensation (with DHT22 fallback)
+    float t = 25.0;  // Default
+    float h = 50.0;  // Default
     
-    float t = isnan(temp.temperature) ? 25.0 : temp.temperature;
-    float h = isnan(humidity.relative_humidity) ? 50.0 : humidity.relative_humidity;
+    if (readSHT(t, h)) {
+        // SHT31 read successful, use real values
+    } else {
+        // Fallback to DHT22 if SHT31 fails
+        sensors_event_t temp, humidity;
+        dht.temperature().getEvent(&temp);
+        dht.humidity().getEvent(&humidity);
+        
+        if (!isnan(temp.temperature)) t = temp.temperature;
+        if (!isnan(humidity.relative_humidity)) h = humidity.relative_humidity;
+    }
     
     return sgp.measureVocIndex(t, h);
 }
+
+
 
 float SensorReader::readPressure() {
     if (!isBMPConnected()) return NAN;

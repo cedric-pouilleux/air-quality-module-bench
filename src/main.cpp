@@ -117,9 +117,9 @@ void setup() {
     brain.addSensor("bmp280", "pressure");
     brain.addSensor("bmp280", "temperature");
     
-    brain.registerHardware("sht40", "SHT40 Temp/Humidity");
-    brain.addSensor("sht40", "temperature");
-    brain.addSensor("sht40", "humidity");
+    brain.registerHardware("sht31", "SHT31 Temp/Humidity");
+    brain.addSensor("sht31", "temperature");
+    brain.addSensor("sht31", "humidity");
     
     brain.registerHardware("sc16co", "SC16-CO Carbon Monoxide");
     brain.addSensor("sc16co", "co");
@@ -161,7 +161,7 @@ void setup() {
         else if (strcmp(hw, "bmp280") == 0) {
             success = sensors.initBMP();
         }
-        else if (strcmp(hw, "sht40") == 0) {
+        else if (strcmp(hw, "sht31") == 0) {
             success = sensors.initSHT();
         }
         else if (strcmp(hw, "sc16co") == 0) {
@@ -192,7 +192,7 @@ void setup() {
     if (sensors.initSGP()) Serial.println(" - SGP40 OK");
     if (sensors.initSGP30()) Serial.println(" - SGP30 OK");
     if (sensors.initSPS30()) Serial.println(" - SPS30 OK");
-    if (sensors.initSHT()) Serial.println(" - SHT40 OK");
+    if (sensors.initSHT()) Serial.println(" - SHT31 OK");
     if (sensors.initCO()) Serial.println(" - SC16-CO OK");
     
     brain.log("info", "Module booted and connected");
@@ -286,12 +286,12 @@ void loop() {
             }
         }
         
-        // SHT40 (Temp/Humidity)
-        if (brain.isHardwareEnabled("sht40")) {
+        // SHT31 (Temp/Humidity)
+        if (brain.isHardwareEnabled("sht31")) {
             float temp, hum;
             if (sensors.readSHT(temp, hum)) {
-                brain.publish("sht40", "temperature", temp);
-                brain.publish("sht40", "humidity", hum);
+                brain.publish("sht31", "temperature", temp);
+                brain.publish("sht31", "humidity", hum);
             }
         }
         

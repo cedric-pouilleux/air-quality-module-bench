@@ -87,8 +87,8 @@ Les mesures sont publiées en utilisant un format **hardware-aware** :
 | **sps30** | `{moduleId}/sps30/pm25` | PM2.5 | µg/m³ |
 | **sps30** | `{moduleId}/sps30/pm4` | PM4.0 | µg/m³ |
 | **sps30** | `{moduleId}/sps30/pm10` | PM10 | µg/m³ |
-| **sht40** | `{moduleId}/sht40/temperature` | Température | °C |
-| **sht40** | `{moduleId}/sht40/humidity` | Humidité | % |
+| **sht31** | `{moduleId}/sht31/temperature` | Température | °C |
+| **sht31** | `{moduleId}/sht31/humidity` | Humidité | % |
 | **mq7** | `{moduleId}/mq7/co` | Monoxyde de carbone | ppm |
 
 ### Topics Système
